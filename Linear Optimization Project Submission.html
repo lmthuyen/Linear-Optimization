@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewOptim Pro | Clean LP Solver</title>
+    <script src="https://cdn.jsdelivr.net/npm/javascript-lp-solver/prod/solver.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --espresso: #1a120b;
+            --crema: #c7a17a;
+            --latte: #eaddca;
+            --accent: #d4a373;
+            --glass: rgba(255, 255, 255, 0.03);
+            --error: #fca5a5;
+            --danger: #7f1d1d;
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+
+        body {
+            background-color: var(--espresso);
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0);
+            background-size: 30px 30px;
+            color: var(--latte);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-family: 'Playfair Display', serif; font-size: 3rem; margin: 0; color: #fff; }
+        .subtitle { color: var(--accent); letter-spacing: 3px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+
+        .section-box {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        h3 { font-family: 'Playfair Display'; margin-top: 0; color: var(--crema); font-size: 1.4rem; }
+
+        input, select {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        input:focus { border-color: var(--accent); outline: none; background: rgba(0, 0, 0, 0.6); }
+
+        .btn {
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-add { background: var(--crema); color: var(--espresso); margin-right: 10px; }
+        .btn-reset { background: var(--danger); color: #fff; }
+        .btn-solve { 
+            background: var(--accent); 
+            color: var(--espresso); 
+            width: 100%; 
+            padding: 18px; 
+            font-size: 1.1rem; 
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+        .btn-remove { background: rgba(127, 29, 29, 0.4); color: var(--error); padding: 5px 10px; font-size: 0.7rem; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: var(--crema); font-size: 0.75rem; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); text-transform: uppercase; }
+        td { padding: 8px; }
+
+        .error-banner {
+            display: none;
+            background: #450a0a;
+            color: var(--error);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--error);
+            font-size: 0.9rem;
+        }
+
+        #results-area {
+            display: none;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid var(--crema);
+            animation: fadeIn 0.6s ease;
+        }
+
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 25px; }
+        .binding { color: #4ade80; font-weight: 600; }
+        .slack { color: #94a3b8; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>BrewOptim Pro</h1>
+        <p class="subtitle">Blank Canvas Linear Solver</p>
+    </header>
+
+    <div id="error-msg" class="error-banner"></div>
+
+    <div class="section-box">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <h3>1. Decision Variables</h3>
+            <button class="btn btn-reset" onclick="resetAll()">Clear All Fields</button>
+        </div>
+        <button class="btn btn-add" onclick="addVariable()">+ Add Variable</button>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 15px;">Add variables first to define your problem dimensions.</p>
+        <table>
+            <thead><tr><th>Name</th><th>Lower Bound</th><th>Upper Bound</th><th>Obj. Coeff</th><th style="width:40px;"></th></tr></thead>
+            <tbody id="var-list"></tbody>
+        </table>
+    </div>
+
+    <div class="section-box">
+        <h3>2. Constraints</h3>
+        <button class="btn btn-add" onclick="addConstraint()">+ Add Constraint</button>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead id="con-head"></thead>
+                <tbody id="con-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 20px; align-items: center; background: rgba(0,0,0,0.2); padding: 25px; border-radius: 20px;">
+        <div style="flex-grow:1">
+            <label style="font-size: 0.7rem; color: var(--crema); text-transform: uppercase; display:block; margin-bottom:8px;">Optimization Goal</label>
+            <select id="optType">
+                <option value="max">Maximize Objective (Profit/Z)</option>
+                <option value="min">Minimize Objective (Cost/Z)</option>
+            </select>
+        </div>
+        <button class="btn btn-solve" onclick="solveModel()">Calculate Optimal Solution</button>
+    </div>
+
+    <div id="results-area">
+        <h2 id="obj-val" style="font-family: 'Playfair Display'; color: #fff; margin:0; font-size: 2.2rem;"></h2>
+        <div class="result-grid">
+            <div class="section-box">
+                <h4 style="color:var(--crema); margin-top:0;">Variable Values & Reduced Costs</h4>
+                <div id="var-res"></div>
+            </div>
+            <div class="section-box">
+                <h4 style="color:var(--crema); margin-top:0;">Constraint Binding & Shadow Prices</h4>
+                <div id="con-res"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Functions to add rows with BLANK values
+    function addVariable(name="", lb="", ub="", obj="") {
+        const list = document.getElementById('var-list');
+        const tr = document.createElement('tr');
+        tr.className = 'var-row';
+        tr.innerHTML = `
+            <td><input type="text" class="v-name" value="${name}" placeholder="e.g. x1" oninput="refreshHeaders()"></td>
+            <td><input type="number" class="v-lb" value="${lb}" placeholder="0"></td>
+            <td><input type="number" class="v-ub" value="${ub}" placeholder="inf"></td>
+            <td><input type="number" class="v-obj" value="${obj}" placeholder="0"></td>
+            <td><button class="btn btn-remove" onclick="this.closest('tr').remove(); refreshHeaders();">X</button></td>
+        `;
+        list.appendChild(tr);
+        refreshHeaders();
+    }
+
+    function addConstraint(name="", coeffs=[], type="max", rhs="") {
+        const list = document.getElementById('con-list');
+        const vCount = document.querySelectorAll('.v-name').length;
+        if (vCount === 0) {
+            showError("Please add at least one variable before adding constraints.");
+            return;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = 'con-row';
+        let cHtml = `<td><input type="text" class="c-name" value="${name}" placeholder="Constraint Label"></td>`;
+        for(let i=0; i<vCount; i++) {
+            cHtml += `<td><input type="number" class="c-coeff" value="${coeffs[i] || ''}" placeholder="0"></td>`;
+        }
+        tr.innerHTML = cHtml + `
+            <td><select class="c-type" style="width:60px;"><option value="max" ${type==='max'?'selected':''}>≤</option><option value="min" ${type==='min'?'selected':''}>≥</option><option value="equal">=</option></select></td>
+            <td><input type="number" class="c-rhs" value="${rhs}" placeholder="0"></td>
+            <td><button class="btn btn-remove" onclick="this.closest('tr').remove()">X</button></td>
+        `;
+        list.appendChild(tr);
+    }
+
+    function refreshHeaders() {
+        const vNames = Array.from(document.querySelectorAll('.v-name')).map(i => i.value || "?");
+        const head = document.getElementById('con-head');
+        let html = '<th>Label</th>';
+        vNames.forEach(n => html += `<th>${n}</th>`);
+        head.innerHTML = html + '<th>Dir</th><th>RHS</th><th></th>';
+
+        // Update existing rows if a variable was added/removed
+        document.querySelectorAll('.con-row').forEach(row => {
+            const current = row.querySelectorAll('.c-coeff').length;
+            const diff = vNames.length - current;
+            if (diff > 0) {
+                for(let i=0; i<diff; i++) {
+                    const td = document.createElement('td');
+                    td.innerHTML = '<input type="number" class="c-coeff" placeholder="0">';
+                    row.insertBefore(td, row.children[row.children.length - 3]);
+                }
+            } else if (diff < 0) {
+                for(let i=0; i < Math.abs(diff); i++) row.removeChild(row.children[row.children.length - 4]);
+            }
+        });
+    }
+
+    function resetAll() {
+        document.getElementById('var-list').innerHTML = '';
+        document.getElementById('con-list').innerHTML = '';
+        document.getElementById('results-area').style.display = 'none';
+        document.getElementById('error-msg').style.display = 'none';
+        refreshHeaders();
+    }
+
+    function showError(msg) {
+        const err = document.getElementById('error-msg');
+        err.innerText = msg;
+        err.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function solveModel() {
+        document.getElementById('error-msg').style.display = 'none';
+        const vRows = document.querySelectorAll('.var-row');
+        const cRows = document.querySelectorAll('.con-row');
+
+        if (vRows.length === 0) return showError("No variables defined.");
+
+        const model = { optimize: "result", opType: document.getElementById('optType').value, constraints: {}, variables: {} };
+        const vNames = [];
+
+        // 1. Process Variables and Bounds
+        for (let i = 0; i < vRows.length; i++) {
+            const name = vRows[i].querySelector('.v-name').value || `x${i+1}`;
+            const lbVal = vRows[i].querySelector('.v-lb').value;
+            const lb = lbVal === "" ? 0 : parseFloat(lbVal);
+            const ubVal = vRows[i].querySelector('.v-ub').value;
+            const ub = ubVal === "" ? Infinity : parseFloat(ubVal);
+            const obj = parseFloat(vRows[i].querySelector('.v-obj').value) || 0;
+
+            vNames.push(name);
+            model.variables[name] = { result: obj };
+            
+            // Add internal constraints for bounds
+            if (lb > 0) { model.constraints[name+'_LB'] = { min: lb }; model.variables[name][name+'_LB'] = 1; }
+            if (ub !== Infinity) { model.constraints[name+'_UB'] = { max: ub }; model.variables[name][name+'_UB'] = 1; }
+        }
+
+        // 2. Process Constraints
+        const cNames = [];
+        for (let i = 0; i < cRows.length; i++) {
+            const cName = cRows[i].querySelector('.c-name').value || `C${i+1}`;
+            const rhsVal = cRows[i].querySelector('.c-rhs').value;
+            if (rhsVal === "") return showError(`Constraint "${cName}" is missing an RHS value.`);
+            
+            cNames.push(cName);
+            model.constraints[cName] = { [cRows[i].querySelector('.c-type').value]: parseFloat(rhsVal) };
+            
+            const coeffs = cRows[i].querySelectorAll('.c-coeff');
+            coeffs.forEach((inp, idx) => {
+                model.variables[vNames[idx]][cName] = parseFloat(inp.value) || 0;
+            });
+        }
+
+        const res = solver.Solve(model);
+        if (!res.feasible) return showError("Infeasible: No solution satisfies these constraints.");
+        
+        renderResults(res, vNames, cNames);
+    }
+
+    function renderResults(res, vNames, cNames) {
+        document.getElementById('results-area').style.display = 'block';
+        document.getElementById('obj-val').innerText = `Optimal Z = ${res.result.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+        let vHtml = '<table><tr><th>Variable</th><th>Value</th><th>Red. Cost</th></tr>';
+        vNames.forEach(n => {
+            const val = res[n] || 0;
+            const rc = res.reducedCost ? (res.reducedCost[n] || 0) : 0;
+            vHtml += `<tr><td>${n}</td><td>${val.toFixed(2)}</td><td>${rc.toFixed(2)}</td></tr>`;
+        });
+        document.getElementById('var-res').innerHTML = vHtml + '</table>';
+
+        let cHtml = '<table><tr><th>Constraint</th><th>Shadow Price</th><th>Status</th></tr>';
+        cNames.forEach(n => {
+            const dual = res[n] || 0;
+            const binding = Math.abs(dual) > 0.00001;
+            cHtml += `<tr><td>${n}</td><td>${dual.toFixed(2)}</td><td class="${binding?'binding':'slack'}">${binding?'Binding':'Slack'}</td></tr>`;
+        });
+        document.getElementById('con-res').innerHTML = cHtml + '</table>';
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+</script>
+</body>
+</html>
