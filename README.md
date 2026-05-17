@@ -22,4 +22,5 @@ A browser-based linear programming solver built with vanilla HTML, CSS, and Java
 * Product mix maximization
 * Maximization with demand constraints
 * Blending minimization
-[![Live Demo](https://img.shields.io/badge/▶%20Live-Demo-espresso?style=for-the-badge)](https://htmlpreview.github.io/?https://github.com/lmthuyen/Linear-Optimization/blob/main/file.html)
+
+<img width="1225" height="817" alt="Screenshot 2026-05-16 at 9 25 30 PM" src="https://github.com/user-attachments/assets/f0b3cc08-c44c-4bcb-bba4-4c0888565d05" />
